@@ -7,6 +7,7 @@ mongoose.connect("mongodb+srv://admin-jiahao:814821Pjh@cluster0.itsbt.mongodb.ne
 const app = express()
 app.use(bodyParser.urlencoded({extended: true}))
 app.use(express.static("public"))
+const session = require('express-session');
 
 const iServiceSchema = new mongoose.Schema({
     _country:{type: String,
@@ -112,6 +113,61 @@ app.post('/login.html', (req,res)=>{
     })
 })
 
+app.set('view engine', 'ejs');
+
+app.use(session({
+  resave: false,
+  saveUninitialized: true,
+  secret: 'SECRET' 
+}));
+
+app.get('/', function(req, res) {
+  res.render('pages/auth');
+});
+
+const passport = require('passport');
+var userProfile;
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.set('view engine', 'ejs');
+
+app.get('/success', (req, res) => res.send(userProfile));
+app.get('/error', (req, res) => res.send("error logging in"));
+
+passport.serializeUser(function(user, cb) {
+  cb(null, user);
+});
+
+passport.deserializeUser(function(obj, cb) {
+  cb(null, obj);
+});
+
+const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
+const GOOGLE_CLIENT_ID = 'our-google-client-id';
+const GOOGLE_CLIENT_SECRET = 'our-google-client-secret';
+passport.use(new GoogleStrategy({
+    clientID: '279787728926-1v8djl972u7l8gpk182gca3e50dmm50u.apps.googleusercontent.com',
+    clientSecret: 'oLx56o4NCf44JJDstENLcu84',
+    callbackURL: "http://localhost:5000/auth/google/callback"
+  },
+  function(accessToken, refreshToken, profile, done) {
+      userProfile=profile;
+      return done(null, userProfile);
+  }
+));
+ 
+app.get('/auth/google', 
+  passport.authenticate('google', { scope : ['profile', 'email'] }));
+ 
+app.get('/auth/google/callback', 
+  passport.authenticate('google', { failureRedirect: '/error' }),
+  function(req, res) {
+    // Successful authentication, redirect success.
+    res.redirect('/success');
+  });
+
 let port = process.env.PORT;
 if (port == null || port == "") {
   port = 5000;
@@ -119,3 +175,6 @@ if (port == null || port == "") {
 app.listen(port, (req,res)=>{
     console.log("server is running on port 5000")
 });
+
+/*279787728926-1v8djl972u7l8gpk182gca3e50dmm50u.apps.googleusercontent.com*/
+/*oLx56o4NCf44JJDstENLcu84*/
